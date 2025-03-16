@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battery Production Dashboard</title>
+    <style>
+        /* General styles */
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: auto; }
+         /* Header box styles */
+         .header-box {
+    display: flex;
+    align-items: center;
+    background-color: navy;
+    color: white;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    justify-content: space-between;
+}
+
+.header-title {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.date-time-container {
+    font-size: 16px;
+}
+
+
+        /* Summary and pie chart styles */
+        .summary { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; }
+        .tab { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 10px; 
+            background-color: #fff; 
+            color: white; 
+            border: 2px solid black; 
+            margin-right: 10px; 
+            border-radius: 5px; 
+            height: 100px; 
+            box-sizing: border-box;
+        }
+        .tab h3 { font-size: 16px; margin: 5px 0; }
+        .tab .number { font-size: 24px; font-weight: bold; margin: 5px 0; }
+
+        .plan { background-color: rgb(31, 15, 137); }
+        .plan-so-far { background-color: rgb(8, 12, 142); }
+        .actual { background-color: rgb(48, 224, 66); }
+        .gap { background-color: red; }
+        .summary > .gap:last-child { margin-right: 0; }
+
+        /* Small pie chart */
+        .pie-chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+        #pieChart {
+            width: 70px !important;
+            height: 70px !important;
+        }
+        .percentage-label {
+            position: absolute;
+            font-size: 14px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        /* Bar chart section */
+        .bar-container { display: flex; margin-bottom: 20px; height: 300px; }
+        .hour-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; margin: 0 10px; }
+        .bars { display: flex; flex-direction: row; align-items: flex-end; height: 100%; }
+        .bar { border-radius: 5px; margin: 0 5px; width: 40px; display: flex; align-items: flex-end; justify-content: center; color: rgb(7, 7, 7); position: relative; transition: background-color 0.3s; }
+        .label { text-align: center; margin-bottom: 5px; }
+        .tooltip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.75); color: white; padding: 5px; border-radius: 4px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .bar:hover .tooltip { opacity: 1; }
+        .scale { display: flex; flex-direction: column; justify-content: space-between; height: 100%; margin-right: 10px; font-size: 12px; color: rgb(7, 7, 7); }
+        .scale-value { text-align: right; }
+
+        /* Additional styles */
+        .date-time-container {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js library -->
+</head>
+<body>
+    <div class="header-box">
+        <div class="header-title">Battery Production Dashboard</div>
+        <div class="date-time-container">
+            <h3 id="currentDateTime"></h3>
+        </div>
+    </div>
+    
+
+        <div class="summary">
+            <div class="tab plan">
+                <h3>Shift Plan</h3>
+                <div class="number">{{ total_plan }}</div>
+            </div>
+            <div class="tab plan-so-far">
+                <h3>Plan So Far</h3>
+                <div class="number">{{ plan_so_far }}</div>
+            </div>
+            <div class="tab actual">
+                <h3>Actual</h3>
+                <div class="number" id="actualOutput">{{ actual_so_far }}</div> <!-- Updated ID for actual output -->
+            </div>
+            <div class="tab gap" id="gapBox">
+                <h3>Gap</h3>
+                <div class="number" id="gapValue">{{ plan_so_far - actual_so_far }}</div> <!-- Updated ID for gap -->
+            </div>
+            <div class="pie-chart-container">
+                <canvas id="pieChart"></canvas>
+                <div class="percentage-label" id="percentageLabel"></div>
+            </div>
+        </div>
+
+        <h2>Hourly Output</h2>
+        <div class="bar-container">
+            <div class="scale">
+                <div class="scale-value">100</div>
+                <div class="scale-value">80</div>
+                <div class="scale-value">60</div>
+                <div class="scale-value">40</div>
+                <div class="scale-value">20</div>
+                <div class="scale-value">0</div>
+            </div>
+
+            {% set max_scale_value = 100 %}
+            {% set max_planned = hourly_plans | max %}
+            {% set max_actual = actual_per_hour | max %}
+            {% set max_value = max_scale_value %}
+            {% if max_actual > max_value %}
+                {% set max_value = max_actual %}
+            {% endif %}
+            {% for i in range(hourly_plans|length) %}
+        <div class="hour-container">
+            <div class="bars">
+                <!-- Planned Bar -->
+                <div class="bar" style="height: {{ (hourly_plans[i] * max_scale_value / max_value) }}%; background-color: navy; position: relative;">
+                    <div class="tooltip">Planned: {{ hourly_plans[i] }}</div>
+                    <div style="position: absolute; top: -20px; width: 100%; text-align: center; font-weight: bold; color: rgb(5, 4, 4);">
+                        {{ hourly_plans[i] }}
+                    </div>
+                </div>
+
+                <!-- Actual Bar -->
+                <div class="bar" style="height: {{ (actual_per_hour[i] * max_scale_value / max_value) }}%; 
+                    background-color: 
+                    {% if actual_per_hour[i] < (hourly_plans[i] * 0.9) %}red
+                    {% elif actual_per_hour[i] >= (hourly_plans[i] * 0.9) and actual_per_hour[i] < (hourly_plans[i] * 0.97) %}rgb(255, 215, 0)
+                    {% else %}rgb(48, 224, 66){% endif %}; position: relative;">
+                    
+                    <div class="tooltip">Actual: {{ actual_per_hour[i] }}</div>
+                    <div style="position: absolute; top: -20px; width: 100%; text-align: center; font-weight: bold;">
+                        {{ actual_per_hour[i] }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hour Label Below -->
+            <div class="label"><span style="font-weight: bold;">{{ i + 1 }}</span></div>
+        </div>
+    {% endfor %}
+</div>
+    </div>
+
+    <script>
+        // Function to update current date and time every second
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            };
+            document.getElementById('currentDateTime').innerText = now.toLocaleDateString('en-GB', options);
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+    
+        // Reload the dashboard every 15 seconds
+        setInterval(() => {
+            location.reload();
+        }, 15000);
+    
+        // Calculate percentage achieved and update pie chart
+        const planSoFar = {{ plan_so_far }}; // Plan so far from the backend
+        const actualSoFar = {{ actual_so_far }}; // Actual output from the backend
+        const percentageAchieved = planSoFar ? (actualSoFar / planSoFar) * 100 : 0; // Prevent division by zero
+        const remainingPercentage = 100 - percentageAchieved;
+        
+        // Determine pie chart color based on achieved percentage
+        let pieColor;
+        if (percentageAchieved < 90) {
+            pieColor = 'red'; // Red for less than 90%
+        } else if (percentageAchieved >= 90 && percentageAchieved < 97) {
+            pieColor = 'rgb(255, 215, 0)'; // Yellow for 90% to 97%
+        } else {
+            pieColor = 'rgb(48, 224, 66)'; // Green for greater than 97%
+        }
+        
+        const ctx = document.getElementById('pieChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [percentageAchieved, remainingPercentage],
+                    backgroundColor: [pieColor, '#d3d3d3'] // Background color based on percentage
+                }],
+                labels: ['Achieved', 'Remaining']
+            },
+            options: {
+                responsive: true,
+                cutout: '70%', // Cutout percentage for doughnut chart
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+        function updateBoxColors() {
+        const actualBox = document.getElementById("actualOutput");
+        const gapBox = document.getElementById("gapBox");
+
+        let percentageAchieved = planSoFar ? (actualSoFar / planSoFar) * 100 : 0; // Prevent division by zero
+
+        let boxColor;
+        if (percentageAchieved < 90) {
+            boxColor = "red";
+        } else if (percentageAchieved >= 90 && percentageAchieved < 97) {
+            boxColor = "rgb(255, 215, 0)";
+        } else {
+            boxColor = "rgb(48, 224, 662)";
+        }
+
+        actualBox.parentElement.style.backgroundColor = boxColor; // Change actual box color
+        gapBox.style.backgroundColor = boxColor; // Change gap box color
+    }
+
+    updateBoxColors();
+        
+        // Update percentage label to show only the percentage symbol
+        const percentageLabel = document.getElementById('percentageLabel');
+        percentageLabel.innerText = `${percentageAchieved.toFixed(0)}%`;
+    
+        // Set color based on the percentage achieved
+        if (percentageAchieved < 90) {
+            percentageLabel.style.color = 'red'; // Red for less than 90%
+        } else if (percentageAchieved >= 90 && percentageAchieved < 97) {
+            percentageLabel.style.color = 'rgb(255, 215, 0)'; // Yellow for 90% to 97%
+        } else {
+            percentageLabel.style.color = 'rgb(48, 224, 66)'; // Green for more than 97%
+        }
+    </script>  
+             
+</body>
+</html>

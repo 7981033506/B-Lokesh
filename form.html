@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battery Submission</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* Import Google Font */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+        /* General Body Styling */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #74ebd5, #9face6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        /* Glassmorphism Container */
+        .container {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            padding: 30px;
+            border-radius: 14px;
+            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            color: #000;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 18px;
+            font-weight: 700;
+            color: #000;
+            text-transform: uppercase;
+        }
+
+        label {
+            font-weight: 600;
+            display: block;
+            text-align: left;
+            margin-top: 12px;
+            color: #000;
+            font-size: 14px;
+        }   
+
+        /* Styling Inputs and Select Dropdowns */
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-top: 6px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.3);
+            color: #000;
+            outline: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        input::placeholder {
+            color: rgba(11, 6, 6, 0.7);
+            font-weight: 400;
+        }
+
+        input:focus, select:focus {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.02);
+        }
+
+        /* Submit Button */
+        button {
+            width: 100%;
+            margin-top: 18px;
+            padding: 14px;
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+            color: rgb(7, 7, 7);
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.1s;
+        }
+
+        button:hover {
+            background: linear-gradient(90deg, #ff4b2b, #ff416c);
+            transform: scale(1.05);
+        }
+
+        /* Message Display */
+        .message {
+            font-weight: bold;
+            margin-top: 15px;
+            display: none;
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        /* Loader Animation */
+        .loading {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .loading div {
+            width: 10px;
+            height: 10px;
+            background-color: rgb(11, 10, 10);
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1 s infinite ease-in-out both;
+        }
+
+        .loading div:nth-child(1) { animation-delay: -0.02s; }
+        .loading div:nth-child(2) { animation-delay: -0.06s; }
+        .loading div:nth-child(3) { animation-delay: 0; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Submit Battery Pack</h1>
+        <form id="batteryForm">
+            <label for="product_id">Battery Number:</label>
+            <input type="text" id="product_id" name="product_id" required placeholder="Enter battery number...">
+
+            <label for="shift">Shift Name:</label>
+            <select id="shift" name="shift" required>
+                <option value="HEMU">HEMU</option>
+                <option value="MAGLEV">MAGLEV</option>
+                <option value="HEXIE">HEXIE</option>
+            </select>
+
+            <label for="master_model">Master Model:</label>
+            <select id="master_model" name="master_model" required>
+                <option value="KE242080">KE242080</option>
+                <option value="KE242620">KE242620</option>
+                <option value="KE240400">KE240400</option>
+            </select>
+
+            <label for="line">Line:</label>
+            <select id="line" name="line" required>
+                <option value="3BCON100">3BCON100</option>
+                <option value="3BCON200">3BCON200</option>
+                <option value="3BCON300">3BCON300</option>
+            </select>
+
+            <button type="submit">Submit</button>
+        </form>
+
+        <div class="message" id="message"></div>
+        <div class="loading">
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            var submitTimeout;
+
+            function submitForm() {
+                $('.loading').fadeIn();
+                $('button[type="submit"]').prop('disabled', true);
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/submit',
+                    data: $('#batteryForm').serialize(),
+                    success: function(response) {
+                        $('#message').text(response.message)
+                                     .css('color', '#28a745')
+                                     .fadeIn()
+                                     .delay(100)
+                                     .fadeOut(60);
+                        $('#product_id').val('');
+                    },
+                    error: function(xhr) {
+                        $('#message').text(xhr.responseJSON.error || 'An error occurred.')
+                                     .css('color', '#dc3545')
+                                     .fadeIn()
+                                     .delay(100)
+                                     .fadeOut(60);
+                    },
+                    complete: function() {
+                        $('.loading').fadeOut();
+                        $('button[type="submit"]').prop('disabled', false);
+                    }
+                });
+            }
+
+            $('#batteryForm').on('submit', function(event) {
+                event.preventDefault();
+                submitForm();
+            });
+
+            $('#product_id').on('input', function() {
+                clearTimeout(submitTimeout);
+                let batteryNumber = $(this).val().trim();
+                if (batteryNumber.length > 0) {
+                    submitTimeout = setTimeout(submitForm, 2000);
+                }
+            });
+
+            $('#product_id').keypress(function(event) {
+                if (event.which === 13) {
+                    event.preventDefault();
+                    submitForm();
+                }
+            });
+        });
+    </script>    
+
+</body>
+</html>
