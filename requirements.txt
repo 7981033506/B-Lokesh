@@ -4,3 +4,4 @@ pandas
 matplotlib
 flask_sqlalchemy
 flask_migrate
+openpyxl
