@@ -3,3 +3,4 @@ gunicorn
 pandas
 matplotlib
 flask_sqlalchemy
+flask_migrate
